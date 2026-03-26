@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Score Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Sora:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-shell">
+        <section class="hero-card access-panel" id="accessPanel">
+            <div class="eyebrow">Secure Match Access</div>
+            <h1>Cricket Scoring Console</h1>
+            <p class="intro">
+                Choose your role and sign in. `rukesh` is the fixed admin with full monitoring and user-control access.
+                Added users can operate scoring when they receive control.
+            </p>
+
+            <div class="access-grid">
+                <div class="access-card">
+                    <div class="role-switch">
+                        <button class="role-option active" type="button" onclick="selectLoginRole('admin', this)">Admin</button>
+                        <button class="role-option" type="button" onclick="selectLoginRole('user', this)">Normal User</button>
+                    </div>
+
+                    <label>
+                        <span>Username</span>
+                        <input type="text" id="viewerName" placeholder="rukesh">
+                    </label>
+
+                    <label id="passwordField">
+                        <span>Password</span>
+                        <input type="password" id="viewerPassword" placeholder="Enter admin password">
+                    </label>
+
+                    <button class="primary-btn full-width" onclick="grantAccess()">Login</button>
+                    <p class="hint">If no username is entered for admin login, the dashboard uses `rukesh` by default.</p>
+                    <p class="access-message" id="accessMessage"></p>
+                </div>
+            </div>
+        </section>
+
+        <section class="hero-card setup" id="setupPanel" style="display:none;">
+            <div class="eyebrow">Match Setup</div>
+            <h1>Start Match</h1>
+            <p class="intro">Configure the fixture once. The saved match resumes for users on later login.</p>
+
+            <div class="form-grid">
+                <label>
+                    <span>Team A</span>
+                    <input type="text" id="teamA" placeholder="India">
+                </label>
+                <label>
+                    <span>Team B</span>
+                    <input type="text" id="teamB" placeholder="Australia">
+                </label>
+                <label>
+                    <span>Total Overs</span>
+                    <input type="number" id="overs" min="1" max="50" placeholder="20">
+                </label>
+                <label>
+                    <span>Venue</span>
+                    <input type="text" id="venue" placeholder="Mumbai">
+                </label>
+            </div>
+
+            <button class="primary-btn" onclick="startMatch()">Start Match</button>
+        </section>
+
+        <main id="matchArea" class="dashboard" style="display:none;">
+            <section class="match-banner">
+                <div>
+                    <div class="eyebrow">Live Match Desk</div>
+                    <h2 id="fixtureTitle">Team A vs Team B</h2>
+                    <p id="matchMeta">Venue | 20 overs</p>
+                </div>
+                <div class="banner-actions">
+                    <div class="viewer-chip" id="viewerChip">User</div>
+                    <div class="controller-chip" id="controllerChip">Controller | rukesh</div>
+                    <div class="status-chip" id="matchStatus">1st Innings Live</div>
+                    <button class="ghost-btn session-btn" onclick="openTransferPanel()">Transfer</button>
+                    <button class="ghost-btn session-btn" onclick="logoutUser()">Logout</button>
+                </div>
+            </section>
+
+            <section class="scoreboard-card">
+                <div class="circuit-board">
+                    <div class="board-lines board-lines-top"></div>
+                    <div class="board-lines board-lines-bottom"></div>
+                </div>
+                <div class="score-scanline" id="scoreScanline"></div>
+                <div class="score-pop-layer" id="scorePopLayer"></div>
+                <div class="monitor-cable" id="monitorCable"></div>
+
+                <div class="score-header">
+                    <div>
+                        <p class="label">Batting Side</p>
+                        <h3 id="battingTeam">Team A</h3>
+                    </div>
+                    <div class="inning-pill" id="inningLabel">Innings 1</div>
+                </div>
+
+                <div class="monitor-window">
+                    <div class="monitor-frame">
+                        <div class="window-head">
+                            <span class="window-led live"></span>
+                            <span class="window-led"></span>
+                            <span class="window-led"></span>
+                        </div>
+                        <div class="window-content">
+                            <div>
+                                <p class="label">Score</p>
+                                <div class="mega-score" id="score">0/0</div>
+                            </div>
+                            <div class="overs-box">
+                                <p class="label">Overs</p>
+                                <div class="overs-value" id="oversDisplay">0.0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-rail">
+                        <div class="signal-source">Input</div>
+                        <div class="signal-track" id="signalTrack">
+                            <span class="signal-pulse"></span>
+                        </div>
+                        <div class="signal-target">Window</div>
+                    </div>
+
+                    <div class="buttons">
+                        <button id="btn-dot" onclick="recordBall('dot', 'btn-dot')">0</button>
+                        <button id="btn-1" onclick="recordBall('1', 'btn-1')">1</button>
+                        <button id="btn-2" onclick="recordBall('2', 'btn-2')">2</button>
+                        <button id="btn-3" onclick="recordBall('3', 'btn-3')">3</button>
+                        <button id="btn-4" onclick="recordBall('4', 'btn-4')">4</button>
+                        <button id="btn-6" onclick="recordBall('6', 'btn-6')">6</button>
+                        <button id="btn-wd" onclick="recordBall('wd', 'btn-wd')">Wd</button>
+                        <button id="btn-w" class="danger-btn" onclick="recordBall('w', 'btn-w')">W</button>
+                        <button class="ghost-btn" onclick="undoLastAction()">Undo</button>
+                    </div>
+                </div>
+
+                <p class="match-note" id="inningsMessage">Opening over about to begin.</p>
+
+                <div class="metrics-grid">
+                    <article class="metric-card">
+                        <span class="metric-title">Current Run Rate</span>
+                        <strong id="runRate">0.00</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span class="metric-title">Target</span>
+                        <strong id="targetDisplay">Set after 1st innings</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span class="metric-title">Required Rate</span>
+                        <strong id="requiredRate">-</strong>
+                    </article>
+                    <article class="metric-card">
+                        <span class="metric-title">Balls Left</span>
+                        <strong id="ballsLeft">120</strong>
+                    </article>
+                </div>
+            </section>
+
+            <section class="match-interaction-grid">
+                <article class="panel over-panel">
+                    <div class="panel-header">
+                        <h4>Over Tracking</h4>
+                        <span id="overSummary">This over: yet to start</span>
+                    </div>
+                    <div class="recent-balls" id="recentBalls">
+                        <span class="ball-chip empty">No deliveries yet</span>
+                    </div>
+                    <div class="summary-list">
+                        <div class="summary-item">
+                            <span>1st Innings</span>
+                            <strong id="firstInningsScore">Not started</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Chase Equation</span>
+                            <strong id="chaseEquation">Waiting for target</strong>
+                        </div>
+                        <div class="summary-item">
+                            <span>Result</span>
+                            <strong id="resultText">Match in progress</strong>
+                        </div>
+                    </div>
+                    <div class="footer-actions">
+                        <button class="secondary-btn" id="inningsAction" onclick="changeInnings()">End 1st Innings</button>
+                        <button class="ghost-btn" onclick="toggleCommentary()">Commentary</button>
+                    </div>
+                </article>
+
+                <article class="panel commentary-panel" id="commentaryPanel" style="display:none;">
+                    <div class="panel-header">
+                        <h4>Commentary</h4>
+                        <span>Generated from scoring flow</span>
+                    </div>
+                    <div class="commentary-feed" id="commentaryFeed">
+                        <div class="feed-line empty">Commentary will appear when the button is enabled.</div>
+                    </div>
+                </article>
+            </section>
+
+            <section class="panel admin-panel" id="adminPanel" style="display:none;">
+                <div class="panel-header">
+                    <h4>Admin Monitoring</h4>
+                    <span id="onlineUsersCount">0 users logged in</span>
+                </div>
+                <div class="summary-list">
+                    <div class="summary-item">
+                        <span>Logged In Users</span>
+                        <strong id="loggedInUsers">No active users</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Current Scorer</span>
+                        <strong id="currentController">rukesh</strong>
+                    </div>
+                    <div class="summary-item">
+                        <span>Allowed Users</span>
+                        <strong id="dashboardUsers">rukesh, naveen, subbuk, subbup, jagan, aravind</strong>
+                    </div>
+                </div>
+                <div class="live-feed admin-feed" id="adminFeed">
+                    <div class="feed-line empty">Admin activity will appear here.</div>
+                </div>
+
+                <div class="admin-controls">
+                    <div class="admin-form">
+                        <label>
+                            <span>Add Scoring User</span>
+                            <input type="text" id="newViewerName" placeholder="new user">
+                        </label>
+                        <label>
+                            <span>Password</span>
+                            <input type="password" id="newViewerPassword" placeholder="optional user password">
+                        </label>
+                        <button class="secondary-btn" type="button" onclick="addAllowedViewer()">Add User</button>
+                    </div>
+                    <div class="admin-list-wrap">
+                        <p class="label">Scoring Users</p>
+                        <div class="admin-list" id="allowedUsersList"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel transfer-panel" id="transferPanel" style="display:none;">
+                <div class="panel-header">
+                    <h4>Transfer Control</h4>
+                    <span>Logged-in users only</span>
+                </div>
+                <div class="switch-list" id="switchList"></div>
+            </section>
+
+            <section class="panel live-feed-panel">
+                <div class="panel-header">
+                    <h4>Live Feed</h4>
+                    <span id="feedStatus">Waiting for first ball</span>
+                </div>
+                <div class="live-feed" id="liveFeed">
+                    <div class="feed-line empty">Score updates will appear here ball by ball.</div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
