@@ -12,87 +12,148 @@
 <body>
     <div class="app-shell">
         <section class="hero-card access-panel" id="accessPanel">
+            <div class="panel-art login-art"></div>
             <div class="eyebrow">Secure Match Access</div>
             <h1>Cricket Scoring Console</h1>
             <p class="intro">
-                Choose your role and sign in. `rukesh` is the fixed admin with full monitoring and user-control access.
-                Added users can operate scoring when they receive control.
+                Sign in with a username to view and score from any synced device. Admin access unlocks user management and match setup.
             </p>
 
             <div class="access-grid">
                 <div class="access-card">
-                    <div class="role-switch">
-                        <button class="role-option active" type="button" onclick="selectLoginRole('admin', this)">Admin</button>
-                        <button class="role-option" type="button" onclick="selectLoginRole('user', this)">Normal User</button>
-                    </div>
-
                     <label>
                         <span>Username</span>
-                        <input type="text" id="viewerName" placeholder="rukesh">
+                        <input type="text" id="viewerName" placeholder="Enter username" autocomplete="username">
                     </label>
 
-                    <label id="passwordField">
+                    <label class="checkbox-row">
+                        <input type="checkbox" id="adminToggle" onchange="toggleAdminLogin()">
+                        <span>Login as Admin</span>
+                    </label>
+
+                    <label id="passwordField" style="display:none;">
                         <span>Password</span>
-                        <input type="password" id="viewerPassword" placeholder="Enter admin password">
+                        <input type="password" id="viewerPassword" placeholder="Enter admin password" autocomplete="current-password">
                     </label>
 
-                    <button class="primary-btn full-width" onclick="grantAccess()">Login</button>
-                    <p class="hint">If no username is entered for admin login, the dashboard uses `rukesh` by default.</p>
+                    <button class="primary-btn full-width" type="button" onclick="grantAccess()">Login</button>
+                    <button class="secondary-btn full-width" id="liveMatchButton" type="button" onclick="viewLiveMatch()" style="display:none; margin-top:10px;">View Live Match</button>
+                    <p class="hint">
+                        Registered scorers can log in by username, admins need password, and others join as anonymous viewers.
+                    </p>
+                    <p class="storage-hint" id="storageHint"></p>
                     <p class="access-message" id="accessMessage"></p>
                 </div>
             </div>
         </section>
 
         <section class="hero-card setup" id="setupPanel" style="display:none;">
+            <div class="panel-art toss-art"></div>
             <div class="eyebrow">Match Setup</div>
             <h1>Start Match</h1>
-            <p class="intro">Configure the fixture once. The saved match resumes for users on later login.</p>
+            <p class="intro">Configure the fixture once. The live match and results history sync through the configured backend.</p>
 
-            <div class="form-grid">
-                <label>
-                    <span>Team A</span>
-                    <input type="text" id="teamA" placeholder="India">
-                </label>
-                <label>
-                    <span>Team B</span>
-                    <input type="text" id="teamB" placeholder="Australia">
-                </label>
-                <label>
-                    <span>Total Overs</span>
-                    <input type="number" id="overs" min="1" max="50" placeholder="20">
-                </label>
-                <label>
-                    <span>Venue</span>
-                    <input type="text" id="venue" placeholder="Mumbai">
-                </label>
+            <div id="setupDetailsStage">
+                <div class="form-grid">
+                    <label>
+                        <span>Team A</span>
+                        <input type="text" id="teamA" placeholder="India">
+                    </label>
+                    <label>
+                        <span>Team B</span>
+                        <input type="text" id="teamB" placeholder="Australia">
+                    </label>
+                    <label>
+                        <span>Total Overs</span>
+                        <input type="number" id="overs" min="1" max="50" placeholder="20">
+                    </label>
+                    <label>
+                        <span>Number of Wickets</span>
+                        <input type="number" id="wicketsInput" min="2" max="12" placeholder="6">
+                    </label>
+                    <label>
+                        <span>Venue</span>
+                        <input type="text" id="venue" placeholder="Mumbai">
+                    </label>
+                </div>
+
+                <div class="setup-state">
+                    <div class="metric-card compact-card">
+                        <span class="metric-title">Last Man Standing</span>
+                        <strong id="lastManStatus">OFF</strong>
+                    </div>
+                </div>
+
+                <div class="footer-actions">
+                    <button class="primary-btn" type="button" onclick="saveSetupDetails()">Save Match Details</button>
+                    <button class="ghost-btn" type="button" onclick="goBack()">Back</button>
+                </div>
             </div>
 
-            <button class="primary-btn" onclick="startMatch()">Start Match</button>
+            <div id="tossStage" style="display:none;">
+                <div class="panel toss-card">
+                    <div class="panel-header">
+                        <h4>Toss</h4>
+                        <span id="pendingMatchSummary">Select toss winner and decision</span>
+                    </div>
+                    <div class="form-grid toss-grid">
+                        <label>
+                            <span>Toss Winner</span>
+                            <select id="tossWinner">
+                                <option value="">Select toss winner</option>
+                                <option value="teamA">Team A</option>
+                                <option value="teamB">Team B</option>
+                            </select>
+                        </label>
+                        <label>
+                            <span>Toss Decision</span>
+                            <select id="tossDecision">
+                                <option value="">Select decision</option>
+                                <option value="bat">Bat</option>
+                                <option value="bowl">Bowl</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="footer-actions">
+                        <button class="primary-btn" type="button" onclick="startMatch()">Start Toss And Match</button>
+                        <button class="ghost-btn" type="button" onclick="backToSetupDetails()">Back</button>
+                    </div>
+                </div>
+            </div>
         </section>
 
         <main id="matchArea" class="dashboard" style="display:none;">
             <section class="match-banner">
                 <div>
+                    <div class="banner-nav">
+                        <button class="ghost-btn session-btn" type="button" onclick="goBack()">Back</button>
+                        <button class="ghost-btn session-btn" type="button" onclick="refreshLiveMatch()">Refresh</button>
+                        <button class="secondary-btn session-btn" id="newMatchButton" type="button" onclick="startNewMatch()">New Match</button>
+                        <button class="ghost-btn session-btn" type="button" onclick="logoutUser()">Logout</button>
+                    </div>
                     <div class="eyebrow">Live Match Desk</div>
                     <h2 id="fixtureTitle">Team A vs Team B</h2>
                     <p id="matchMeta">Venue | 20 overs</p>
                 </div>
                 <div class="banner-actions">
                     <div class="viewer-chip" id="viewerChip">User</div>
-                    <div class="controller-chip" id="controllerChip">Controller | rukesh</div>
                     <div class="status-chip" id="matchStatus">1st Innings Live</div>
-                    <button class="ghost-btn session-btn" onclick="openTransferPanel()">Transfer</button>
-                    <button class="ghost-btn session-btn" onclick="logoutUser()">Logout</button>
+                    <button class="ghost-btn session-btn" id="requestControlButton" type="button" onclick="requestControl()" style="display:none;">Request Control</button>
+                    <button class="secondary-btn session-btn" id="transferControlButton" type="button" onclick="approveControlRequest()" style="display:none;">Transfer Control</button>
+                    <div class="viewer-chip" id="controlRequestStatus" style="display:none;">No control requests</div>
                 </div>
             </section>
 
             <section class="scoreboard-card">
+                <div class="panel-art score-art"></div>
+                <div class="icon-ribbon"></div>
                 <div class="circuit-board">
                     <div class="board-lines board-lines-top"></div>
                     <div class="board-lines board-lines-bottom"></div>
                 </div>
                 <div class="score-scanline" id="scoreScanline"></div>
                 <div class="score-pop-layer" id="scorePopLayer"></div>
+                <div class="celebration-layer" id="celebrationLayer"></div>
                 <div class="monitor-cable" id="monitorCable"></div>
 
                 <div class="score-header">
@@ -131,15 +192,18 @@
                     </div>
 
                     <div class="buttons">
-                        <button id="btn-dot" onclick="recordBall('dot', 'btn-dot')">0</button>
-                        <button id="btn-1" onclick="recordBall('1', 'btn-1')">1</button>
-                        <button id="btn-2" onclick="recordBall('2', 'btn-2')">2</button>
-                        <button id="btn-3" onclick="recordBall('3', 'btn-3')">3</button>
-                        <button id="btn-4" onclick="recordBall('4', 'btn-4')">4</button>
-                        <button id="btn-6" onclick="recordBall('6', 'btn-6')">6</button>
-                        <button id="btn-wd" onclick="recordBall('wd', 'btn-wd')">Wd</button>
-                        <button id="btn-w" class="danger-btn" onclick="recordBall('w', 'btn-w')">W</button>
-                        <button class="ghost-btn" onclick="undoLastAction()">Undo</button>
+                        <button id="btn-dot" type="button" onclick="recordBall('dot', 'btn-dot')">0</button>
+                        <button id="btn-1" type="button" onclick="recordBall('1', 'btn-1')">1</button>
+                        <button id="btn-2" type="button" onclick="recordBall('2', 'btn-2')">2</button>
+                        <button id="btn-3" type="button" onclick="recordBall('3', 'btn-3')">3</button>
+                        <button id="btn-4" type="button" onclick="recordBall('4', 'btn-4')">4</button>
+                        <button id="btn-6" type="button" onclick="recordBall('6', 'btn-6')">6</button>
+                        <button id="btn-wd" type="button" onclick="recordBall('wd', 'btn-wd')">Wide</button>
+                        <button id="btn-nb" type="button" onclick="recordBall('nb', 'btn-nb')">NB +1</button>
+                        <button id="btn-byes" type="button" onclick="openByesModal()">Byes</button>
+                        <button id="btn-runout" type="button" onclick="openRunoutModal()">Runout</button>
+                        <button id="btn-w" class="danger-btn" type="button" onclick="recordBall('w', 'btn-w')">Wicket</button>
+                        <button class="ghost-btn" type="button" onclick="undoLastAction()">Undo</button>
                     </div>
                 </div>
 
@@ -162,13 +226,17 @@
                         <span class="metric-title">Balls Left</span>
                         <strong id="ballsLeft">120</strong>
                     </article>
+                    <article class="metric-card">
+                        <span class="metric-title">Last Man Standing</span>
+                        <strong id="liveLastManStatus">OFF</strong>
+                    </article>
                 </div>
             </section>
 
             <section class="match-interaction-grid">
                 <article class="panel over-panel">
                     <div class="panel-header">
-                        <h4>Over Tracking</h4>
+                        <h4>Scorecard</h4>
                         <span id="overSummary">This over: yet to start</span>
                     </div>
                     <div class="recent-balls" id="recentBalls">
@@ -188,19 +256,20 @@
                             <strong id="resultText">Match in progress</strong>
                         </div>
                     </div>
-                    <div class="footer-actions">
-                        <button class="secondary-btn" id="inningsAction" onclick="changeInnings()">End 1st Innings</button>
-                        <button class="ghost-btn" onclick="toggleCommentary()">Commentary</button>
-                    </div>
-                </article>
+                <div class="footer-actions">
+                    <button class="secondary-btn" id="inningsAction" type="button" onclick="changeInnings()">End 1st Innings</button>
+                    <button class="danger-btn" id="endMatchButton" type="button" onclick="openEndMatchModal()">End Match</button>
+                    <button class="ghost-btn" type="button" onclick="toggleCommentary()">Commentary</button>
+                </div>
+            </article>
 
-                <article class="panel commentary-panel" id="commentaryPanel" style="display:none;">
+                <article class="panel commentary-panel" id="commentaryPanel">
                     <div class="panel-header">
                         <h4>Commentary</h4>
-                        <span>Generated from scoring flow</span>
+                        <span>Ball-by-ball auto updates</span>
                     </div>
                     <div class="commentary-feed" id="commentaryFeed">
-                        <div class="feed-line empty">Commentary will appear when the button is enabled.</div>
+                        <div class="feed-line empty">Commentary will appear when the innings starts.</div>
                     </div>
                 </article>
             </section>
@@ -221,7 +290,7 @@
                     </div>
                     <div class="summary-item">
                         <span>Allowed Users</span>
-                        <strong id="dashboardUsers">rukesh, naveen, subbuk, subbup, jagan, aravind</strong>
+                        <strong id="dashboardUsers">No users</strong>
                     </div>
                 </div>
                 <div class="live-feed admin-feed" id="adminFeed">
@@ -231,42 +300,111 @@
                 <div class="admin-controls">
                     <div class="admin-form">
                         <label>
-                            <span>Add Scoring User</span>
+                            <span>Add User</span>
                             <input type="text" id="newViewerName" placeholder="new user">
                         </label>
                         <label>
-                            <span>Password</span>
-                            <input type="password" id="newViewerPassword" placeholder="optional user password">
+                            <span>Permission</span>
+                            <select id="newViewerPermission">
+                                <option value="write">Write (Scoring)</option>
+                                <option value="read">Read (View Only)</option>
+                            </select>
                         </label>
-                        <button class="secondary-btn" type="button" onclick="addAllowedViewer()">Add User</button>
+                        <button class="secondary-btn" type="button" onclick="addAllowedViewer()">Create User</button>
                     </div>
                     <div class="admin-list-wrap">
-                        <p class="label">Scoring Users</p>
+                        <p class="label">Dashboard Users</p>
                         <div class="admin-list" id="allowedUsersList"></div>
                     </div>
                 </div>
             </section>
 
-            <section class="panel transfer-panel" id="transferPanel" style="display:none;">
-                <div class="panel-header">
-                    <h4>Transfer Control</h4>
-                    <span>Logged-in users only</span>
-                </div>
-                <div class="switch-list" id="switchList"></div>
-            </section>
-
             <section class="panel live-feed-panel">
                 <div class="panel-header">
-                    <h4>Live Feed</h4>
-                    <span id="feedStatus">Waiting for first ball</span>
+                    <h4>Over Summary</h4>
+                    <span id="feedStatus">Waiting for first over</span>
                 </div>
                 <div class="live-feed" id="liveFeed">
-                    <div class="feed-line empty">Score updates will appear here ball by ball.</div>
+                    <div class="feed-line empty">Overs will appear here once scoring starts.</div>
+                </div>
+            </section>
+
+            <section class="panel history-panel">
+                <div class="panel-header">
+                    <h4>Previous Matches</h4>
+                    <span id="historyCount">0 completed</span>
+                </div>
+                <div class="history-list" id="historyList">
+                    <div class="feed-line empty">Completed matches will appear here.</div>
                 </div>
             </section>
         </main>
     </div>
 
-    <script src="script.js"></script>
+    <div class="modal-backdrop" id="runoutModal" style="display:none;">
+        <div class="modal-card">
+            <div class="panel-header">
+                <h4>Runout</h4>
+                <button class="ghost-btn icon-btn" type="button" onclick="closeRunoutModal()">Close</button>
+            </div>
+            <p class="intro compact-intro">Choose runs completed before the wicket fell.</p>
+            <div class="runout-grid" id="runoutOptions"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="byesModal" style="display:none;">
+        <div class="modal-card">
+            <div class="panel-header">
+                <h4>Byes</h4>
+                <button class="ghost-btn icon-btn" type="button" onclick="closeByesModal()">Close</button>
+            </div>
+            <p class="intro compact-intro">Choose how many byes were completed.</p>
+            <div class="runout-grid" id="byesOptions"></div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="statusModal" style="display:none;">
+        <div class="modal-card">
+            <div class="eyebrow" id="modalEyebrow">Match Update</div>
+            <h3 id="modalTitle">Innings Completed</h3>
+            <p class="intro compact-intro" id="modalMessage">The first innings is complete.</p>
+            <div class="footer-actions">
+                <button class="primary-btn" type="button" onclick="closeStatusModal()">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-backdrop" id="endMatchModal" style="display:none;">
+        <div class="modal-card">
+            <div class="eyebrow">Protected Action</div>
+            <h3>End Match Immediately</h3>
+            <p class="intro compact-intro">Enter the match ending password to stop the match and return to new match setup.</p>
+            <label>
+                <span>Match Ending Password</span>
+                <input type="password" id="endMatchPassword" placeholder="Enter password">
+            </label>
+            <p class="access-message" id="endMatchMessage"></p>
+            <div class="footer-actions">
+                <button class="danger-btn" type="button" onclick="confirmEndMatch()">End Match</button>
+                <button class="ghost-btn" type="button" onclick="closeEndMatchModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.CRICKET_APP_CONFIG = {
+  firebaseConfig: {
+    apiKey: "AIzaSyClEUkrLZxVYPjb_yUFgrwlzhVU-OtCQW0",
+    authDomain: "cricket-dashboard-23f1e.firebaseapp.com",
+    projectId: "cricket-dashboard-23f1e",
+    databaseURL: "https://cricket-dashboard-23f1e-default-rtdb.asia-southeast1.firebasedatabase.app",
+    storageBucket: "cricket-dashboard-23f1e.firebasestorage.app",
+    messagingSenderId: "149456600808",
+    appId: "1:149456600808:web:f6f3a42d02b972d6dad35d"
+  }
+};
+    </script>
+    <script type="module" src="script.js"></script>
 </body>
 </html>
+
