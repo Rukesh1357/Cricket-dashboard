@@ -22,6 +22,8 @@ let renderQueued=false;
 let firestoreDb=null;
 let realtimeDb=null;
 let stopLiveMatchSync=null;
+let inactivityTimer=null;
+const INACTIVITY_LIMIT_MS=30000;
 
 try{
 const app=initializeApp(firebaseConfig);
@@ -78,7 +80,10 @@ function ballsLeft(){return Math.max(state.match.totalOvers*6-state.match.balls,
 function wicketsLeft(){return Math.max(state.match.maxWickets-state.match.wickets,0);}
 function dismissalsDone(){return state.match.wickets>=state.match.maxWickets;}
 function hasLiveMatch(){return Boolean(state.match.teamA&&!state.match.isComplete);}
-function currentUser(){return getUser(state.viewer);}
+function currentUser(){
+if(state.role==="viewer"&&state.viewer)return {name:state.viewer,role:"viewer",permission:"read",active:true};
+return getUser(state.viewer);
+}
 function canScore(){
 const user=currentUser();
 if(!user||!state.viewer||!hasLiveMatch())return false;
@@ -234,6 +239,7 @@ const historyItems=await store.read(KEYS.history,[]);
 state.matchHistory=Array.isArray(historyItems)?historyItems.slice(0,20):[];
 subscribeToLiveMatch();
 bindInputs();
+bindActivityTracking();
 buildRunoutOptions();
 buildByesOptions();
 updateStorageHint();
@@ -339,6 +345,29 @@ liveMatchButton.style.display=shouldShow?"inline-flex":"none";
 liveMatchButton.disabled=!shouldShow;
 }
 
+function clearInactivityTimer(){
+if(inactivityTimer){clearTimeout(inactivityTimer);inactivityTimer=null;}
+}
+
+function scheduleInactivityLogout(){
+clearInactivityTimer();
+if(!state.viewer)return;
+inactivityTimer=setTimeout(()=>{
+if(state.viewer)void logoutUser("Logged out due to 30 seconds of inactivity.");
+},INACTIVITY_LIMIT_MS);
+}
+
+function registerActivity(){
+if(!state.viewer)return;
+scheduleInactivityLogout();
+}
+
+function bindActivityTracking(){
+["click","keydown","mousemove","touchstart","scroll"].forEach((eventName)=>{
+window.addEventListener(eventName,registerActivity,{passive:true});
+});
+}
+
 function viewLiveMatch(){
 if(!state.viewer||!hasLiveMatch())return;
 state.awaitingLiveView=false;
@@ -379,27 +408,30 @@ const password=val("viewerPassword");
 if(!name){setAccessMessage("Enter a username to continue.","denied");return;}
 if(!validUsername(name.toLowerCase())){setAccessMessage("Use 3-20 letters, numbers, hyphen, or underscore.","denied");return;}
 const user=await fetchUserRecord(name);
-if(!user){setAccessMessage("User not allowed.","denied");return;}
-if(user.active===false){setAccessMessage("User not allowed.","denied");return;}
+const loginUser=!state.loginAsAdmin&&(!user||user.active===false)?{name:name.toLowerCase(),role:"viewer",permission:"read",active:true,isAnonymous:true}:user;
+if(!loginUser){setAccessMessage("User not allowed.","denied");return;}
+if(user&&user.active===false&&state.loginAsAdmin){setAccessMessage("User not allowed.","denied");return;}
 if(state.loginAsAdmin){
-if(user.role!=="admin"){setAccessMessage("This account is not an admin account.","denied");return;}
+if(loginUser.role!=="admin"){setAccessMessage("This account is not an admin account.","denied");return;}
 if(password!==ADMIN_PASSWORD){setAccessMessage("Incorrect admin password.","denied");return;}
 }else{
-if(user.role==="admin"){setAccessMessage("Admin must use the admin checkbox and password.","denied");return;}
-if(user.role!=="scorer"){setAccessMessage("User not allowed.","denied");return;}
+if(loginUser.role==="admin"){setAccessMessage("Admin must use the admin checkbox and password.","denied");return;}
 }
-state.users=state.users.some((entry)=>entry.name===user.name)?state.users.map((entry)=>entry.name===user.name?user:entry):normalizeUsers([...state.users,user]);
+if(!loginUser.isAnonymous){
+state.users=state.users.some((entry)=>entry.name===loginUser.name)?state.users.map((entry)=>entry.name===loginUser.name?loginUser:entry):normalizeUsers([...state.users,loginUser]);
+}
 const latestMatch=normalizeMatch(await store.read(KEYS.match,emptyMatch()));
 if(latestMatch.teamA&&!latestMatch.isComplete)state.match=latestMatch;
-state.viewer=user.name;
-state.role=user.role;
+state.viewer=loginUser.name;
+state.role=loginUser.role;
 state.awaitingLiveView=Boolean(latestMatch.teamA&&!latestMatch.isComplete);
 updateLiveMatchEntry();
-state.sessions=state.sessions.filter((session)=>session.name!==user.name);
-state.sessions.push({name:user.name,role:user.role,lastAction:"Logged in"});
-appendAdminFeed(`${user.name} logged in as ${user.role}.`,"system");
-setAccessMessage(state.awaitingLiveView?`Live match is in progress. Click View Live Match.`:`Welcome ${user.name}.`,"granted");
+state.sessions=state.sessions.filter((session)=>session.name!==loginUser.name);
+state.sessions.push({name:loginUser.name,role:loginUser.role,lastAction:"Logged in"});
+appendAdminFeed(`${loginUser.name} logged in as ${loginUser.role}.`,"system");
+setAccessMessage(state.awaitingLiveView?`Live match is in progress. Click View Live Match.`:`Welcome ${loginUser.name}.`,"granted");
 setVal("viewerPassword","");
+scheduleInactivityLogout();
 await persistAll();
 queueRender();
 }catch(error){
@@ -829,9 +861,11 @@ await updateSessionAction("Used Undo");
 
 function toggleCommentary(){state.commentaryVisible=!state.commentaryVisible;queueRender();}
 
-async function logoutUser(){
+async function logoutUser(message=""){
 if(!state.viewer)return;
 const leaving=state.viewer;
+const leavingRole=state.role;
+clearInactivityTimer();
 state.sessions=state.sessions.filter((session)=>session.name!==state.viewer);
 state.viewer="";
 state.role="scorer";
@@ -845,8 +879,8 @@ hide("matchArea");
 show("accessPanel");
 setVal("viewerName","");
 setVal("viewerPassword","");
-setAccessMessage("");
-appendAdminFeed(`${leaving} logged out.`,"system");
+setAccessMessage(message);
+appendAdminFeed(`${leaving} logged out.${leavingRole==="viewer"?" (viewer)":""}`,"system");
 await persistAll();
 queueRender();
 }
@@ -905,7 +939,7 @@ function renderRoleView(hasMatch){
     if(liveFeedPanel)liveFeedPanel.style.order=isAdmin?"0":"3";
     updateLiveMatchEntry();
     if(newMatchButton)newMatchButton.style.display=hasMatch&&!state.match.isComplete?"none":"inline-flex";
-    if(requestControlButton)requestControlButton.style.display=state.viewer&&hasMatch&&!state.match.isComplete&&!canScore()?"inline-flex":"none";
+    if(requestControlButton)requestControlButton.style.display=state.viewer&&state.role==="scorer"&&hasMatch&&!state.match.isComplete&&!canScore()?"inline-flex":"none";
     if(transferControlButton)transferControlButton.style.display=canScore()&&state.match.controlRequest?.requestedBy?"inline-flex":"none";
     if(controlRequestStatus){
         const requestText=state.match.controlRequest?.requestedBy?`Request: ${state.match.controlRequest.requestedBy}`:canScore()&&hasMatch?`Controller: ${state.match.controller}`:"View only";
@@ -913,7 +947,7 @@ function renderRoleView(hasMatch){
         controlRequestStatus.style.display=hasMatch?"inline-flex":"none";
     }
 
-    txt("viewerChip",state.viewer?`${isAdmin?"Admin":"Scorer"} | ${state.viewer}`:"Guest");
+    txt("viewerChip",state.viewer?`${isAdmin?"Admin":state.role==="viewer"?"Viewer":"Scorer"} | ${state.viewer}`:"Guest");
 }
 
 function renderHistory(){
