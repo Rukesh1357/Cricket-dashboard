@@ -13,6 +13,7 @@ Important first:
 - You asked for free hosting with no charges for lifetime.
 - No provider can guarantee "free forever" for lifetime.
 - What they offer is a free tier as of today, and that can change later.
+- If you want the lowest billing risk, use only a pure static hosting free tier and do not enable paid add-ons.
 
 So the correct practical answer is:
 
@@ -55,6 +56,50 @@ For your current app, use:
 1. `Cloudflare Pages` if you want the easiest free public hosting
 2. `GitHub Pages` if your code is already on GitHub
 
+If your priority is:
+
+- "I do not want surprise billing"
+
+then prefer:
+
+1. `Cloudflare Pages`
+2. `GitHub Pages`
+
+and avoid using paid platform features, serverless functions, or add-ons.
+
+## Safest From Billing Risk
+
+### 1. Cloudflare Pages
+
+Safest recommendation for this project.
+
+Why:
+
+- strong free tier for static sites
+- good mobile delivery
+- simple direct upload
+- lower risk for a basic static site if you do not enable extra paid products
+
+### 2. GitHub Pages
+
+Also low risk if:
+
+- your repo is public
+- your site stays a normal static site
+
+## Less Safe If You Want Zero Billing Risk
+
+These are not "bad", but I would not put them first if your main goal is avoiding any possible charge:
+
+1. `Netlify`
+2. `Vercel`
+
+Reason:
+
+- they have free plans
+- but they also have clearer usage-based/platform billing paths if you later enable extra features
+- so for strict peace of mind, `Cloudflare Pages` or `GitHub Pages` are safer picks
+
 ## 1. Cloudflare Pages
 
 Best simple free option for this project.
@@ -90,6 +135,12 @@ Official links:
 - mobile access
 - demo/testing
 - easy deployment
+
+### Billing note
+
+- For a plain static site on the current free tier, you should normally not be charged.
+- But Cloudflare still does not legally mean "free forever for lifetime."
+- Always check the current pricing page before deploying.
 
 ### Not enough for
 
@@ -130,6 +181,11 @@ Official links:
 - version control
 - easy updates via GitHub push
 
+### Billing note
+
+- GitHub Pages is free for public repositories.
+- But limits still apply and GitHub pricing/policies can change in the future.
+
 ## 3. Netlify
 
 Good if you like manual drag-and-drop deploy.
@@ -169,8 +225,9 @@ Official links:
 
 For your case:
 
-- easiest free host now: `Cloudflare Pages`
+- easiest and safest free host now: `Cloudflare Pages`
 - best if already using GitHub: `GitHub Pages`
+- avoid `Netlify` and `Vercel` if your main goal is "minimum billing risk"
 
 ## Files You Need To Upload
 
@@ -314,6 +371,7 @@ Use:
 3. Upload the 3 project files.
 4. Deploy.
 5. Share the generated link with your users.
+6. Do not enable paid extras or advanced products if you want to stay on the safest free path.
 
 ### Option B: Production build
 
@@ -350,3 +408,6 @@ If you want, I can do either of these next:
 
 1. update this project for free static hosting on `Cloudflare Pages`
 2. convert this project toward real production with `Firebase Hosting + Auth + Firestore`
+
+
+
